@@ -720,18 +720,23 @@ app.post('/api/asaas/customer', async (req, res) => {
 // Depósito PIX
 app.post('/api/asaas/deposit/pix', async (req, res) => {
   try {
+    // DEBUG: log do body recebido para investigação
+    console.log('DEBUG /api/asaas/deposit/pix - req.body:', JSON.stringify(req.body));
     const { customerId, value, description } = req.body;
     if (!customerId || !value) return res.status(400).json({ error: 'customerId e value são obrigatórios' });
     
     // 1. Criar o pagamento
-    const payment = await asaasApi.post('/payments', {
+    const asaasPayload = {
       customer: customerId,
       billingType: 'PIX',
       value,
       dueDate: new Date().toISOString().split('T')[0],
       description: description || 'Depósito',
       externalReference: `dep_${Date.now()}`,
-    });
+    };
+    console.log('DEBUG /api/asaas/deposit/pix - payload to Asaas:', JSON.stringify(asaasPayload));
+
+    const payment = await asaasApi.post('/payments', asaasPayload);
     
     console.log('Payment criado:', payment.data.id);
     
@@ -751,8 +756,14 @@ app.post('/api/asaas/deposit/pix', async (req, res) => {
       expiryDate: pixQrCode.data.expirationDate
     });
   } catch (err) {
-    console.log('Erro no pagamento PIX:', err.response?.data);
-    const errorMsg = err.response?.data?.errors?.[0]?.description || 'Erro ao criar pagamento PIX';
+    console.error('Erro no pagamento PIX - full error object:', err);
+    console.error('Erro no pagamento PIX - err.response:', err.response ? {
+      status: err.response.status,
+      data: err.response.data,
+      headers: err.response.headers
+    } : null);
+
+    const errorMsg = err.response?.data?.errors?.[0]?.description || err.response?.data || err.message || 'Erro ao criar pagamento PIX';
     res.status(err.response?.status || 500).json({ error: errorMsg });
   }
 });

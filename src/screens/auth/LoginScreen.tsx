@@ -19,6 +19,7 @@ import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { useApp } from '../../context/AppContext';
 import { colors, globalStyles } from '../../theme';
 import BackendAsaasService from '../../services/BackendAsaasService';
+import CustomAlert from '../../components/CustomAlert';
 
 type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -30,6 +31,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertType, setAlertType] = useState<'error' | 'success' | 'warning' | 'info'>('error');
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertConfirm, setAlertConfirm] = useState('OK');
 
   const handleUsernameNext = async () => {
     if (!username || username.trim().length < 3) {
@@ -47,12 +53,18 @@ export default function LoginScreen() {
       
       if (userResponse.error) {
         if (userResponse.error === 'Usuário não encontrado') {
-          Alert.alert('ID não encontrado', 'Este ID não está cadastrado. Deseja criar uma conta?', [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Criar Conta', onPress: () => navigation.navigate('Register') }
-          ]);
+          // show custom alert
+          setAlertType('info');
+          setAlertTitle('ID não encontrado');
+          setAlertMessage('Este ID não está cadastrado. Deseja criar uma conta?');
+          setAlertConfirm('Criar Conta');
+          setAlertVisible(true);
         } else {
-          Alert.alert('Erro', userResponse.error);
+          setAlertType('error');
+          setAlertTitle('Erro');
+          setAlertMessage(String(userResponse.error));
+          setAlertConfirm('OK');
+          setAlertVisible(true);
         }
         return;
       }
@@ -84,11 +96,23 @@ export default function LoginScreen() {
       
       if (loginResponse.error) {
         if (loginResponse.error.includes('Senha incorreta')) {
-          Alert.alert('Senha incorreta', 'A senha digitada está incorreta. Tente novamente.');
+          setAlertType('error');
+          setAlertTitle('Senha incorreta');
+          setAlertMessage('A senha digitada está incorreta. Tente novamente.');
+          setAlertConfirm('OK');
+          setAlertVisible(true);
         } else if (loginResponse.error.includes('Nome de usuário não encontrado')) {
-          Alert.alert('Usuário não encontrado', 'Este nome de usuário não está cadastrado.');
+          setAlertType('info');
+          setAlertTitle('Usuário não encontrado');
+          setAlertMessage('Este nome de usuário não está cadastrado. Deseja criar uma conta?');
+          setAlertConfirm('Criar Conta');
+          setAlertVisible(true);
         } else {
-          Alert.alert('Erro', loginResponse.error);
+          setAlertType('error');
+          setAlertTitle('Erro');
+          setAlertMessage(String(loginResponse.error));
+          setAlertConfirm('OK');
+          setAlertVisible(true);
         }
         return;
       }
@@ -121,6 +145,7 @@ export default function LoginScreen() {
   };
 
   return (
+    <>
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -226,6 +251,22 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    {/* Custom alert modal */}
+    <CustomAlert
+      visible={alertVisible}
+      type={alertType}
+      title={alertTitle}
+      message={alertMessage}
+      confirmText={alertConfirm}
+      onClose={() => {
+        setAlertVisible(false);
+        // se o confirm for 'Criar Conta' navegamos para registro
+        if (alertConfirm === 'Criar Conta') {
+          navigation.navigate('Register');
+        }
+      }}
+    />
+    </>
   );
 }
 
