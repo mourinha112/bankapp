@@ -39,7 +39,19 @@ export default function DepositScreen() {
 
     if (success) {
       Alert.alert('Sucesso', 'Depósito realizado com sucesso!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => {
+            // Em web, navigation.goBack() pode não funcionar se não houver histórico.
+            // Nesse caso, navegar para o Dashboard (rota principal) se possível.
+            // @ts-ignore
+            if (navigation.canGoBack && navigation.canGoBack()) {
+              // @ts-ignore
+              navigation.goBack();
+            } else {
+              // @ts-ignore
+              navigation.navigate && navigation.navigate('Dashboard');
+            }
+          }
+        }
       ]);
     } else {
       Alert.alert('Erro', 'Não foi possível realizar o depósito');
@@ -121,7 +133,17 @@ export default function DepositScreen() {
 
             <TouchableOpacity
               style={[globalStyles.buttonSecondary, globalStyles.button, globalStyles.mt16]}
-              onPress={() => navigation.goBack()}
+              onPress={() => {
+                // fallback para web
+                // @ts-ignore
+                if (navigation.canGoBack && navigation.canGoBack()) {
+                  // @ts-ignore
+                  navigation.goBack();
+                } else {
+                  // @ts-ignore
+                  navigation.navigate && navigation.navigate('Dashboard');
+                }
+              }}
             >
               <Text style={globalStyles.buttonSecondaryText}>Cancelar</Text>
             </TouchableOpacity>

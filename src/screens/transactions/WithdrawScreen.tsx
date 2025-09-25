@@ -84,7 +84,18 @@ export default function WithdrawScreen() {
         state.auth.user.balance = response.balance;
       }
       Alert.alert('Sucesso', 'Saque solicitado!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => {
+            // fallback para web quando não há histórico
+            // @ts-ignore
+            if (navigation.canGoBack && navigation.canGoBack()) {
+              // @ts-ignore
+              navigation.goBack();
+            } else {
+              // @ts-ignore
+              navigation.navigate && navigation.navigate('Dashboard');
+            }
+          }
+        }
       ]);
     } catch (e) {
       setLoading(false);
@@ -215,7 +226,17 @@ export default function WithdrawScreen() {
 
             <TouchableOpacity
               style={[globalStyles.buttonSecondary, globalStyles.button, globalStyles.mt16]}
-              onPress={() => navigation.goBack()}
+              onPress={() => {
+                // fallback para web
+                // @ts-ignore
+                if (navigation.canGoBack && navigation.canGoBack()) {
+                  // @ts-ignore
+                  navigation.goBack();
+                } else {
+                  // @ts-ignore
+                  navigation.navigate && navigation.navigate('Dashboard');
+                }
+              }}
             >
               <Text style={globalStyles.buttonSecondaryText}>Cancelar</Text>
             </TouchableOpacity>
