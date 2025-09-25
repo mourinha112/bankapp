@@ -387,10 +387,14 @@ export default function RealDepositScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[globalStyles.buttonSecondary, globalStyles.button, globalStyles.mt16]}
-              onPress={() => navigation.goBack()}
+              style={[globalStyles.button, globalStyles.mt16]}
+              onPress={() => {
+                // Navegar diretamente para Dashboard para evitar GO_BACK não tratado na web/modal
+                // @ts-ignore
+                if (navigation.navigate) navigation.navigate('Dashboard');
+              }}
             >
-              <Text style={globalStyles.buttonSecondaryText}>Cancelar</Text>
+              <Text style={globalStyles.buttonText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -430,7 +434,8 @@ export default function RealDepositScreen() {
                         { text: 'Simular Sucesso', onPress: () => {
                           Alert.alert('Sucesso', 'Pagamento realizado com sucesso!');
                           setShowPayment(false);
-                          navigation.goBack();
+                          // @ts-ignore
+                          if (navigation.navigate) navigation.navigate('Dashboard');
                         }}
                       ]
                     );

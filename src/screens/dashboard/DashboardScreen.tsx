@@ -196,11 +196,11 @@ export default function DashboardScreen() {
   const renderTransactionScreen = () => {
     switch (transactionType) {
       case 'deposit':
-        return <RealDepositScreen />;
+        return <RealDepositScreen onClose={() => setShowTransactionModal(false)} />;
       case 'withdraw':
-        return <RealWithdrawScreen />;
+        return <RealWithdrawScreen onClose={() => setShowTransactionModal(false)} />;
       case 'transfer':
-        return <TransferScreen />;
+        return <TransferScreen onClose={() => setShowTransactionModal(false)} />;
       default:
         return null;
     }
@@ -237,11 +237,26 @@ export default function DashboardScreen() {
                   </View>
                 </TouchableOpacity>
                 <View>
-                  <Text style={styles.greeting}>Olá, {user?.username}</Text>
-                  <TouchableOpacity style={styles.bankSelector}>
-                    <Text style={styles.bankName}>Bank App</Text>
-                    <Ionicons name="chevron-down" size={16} color={colors.white} />
-                  </TouchableOpacity>
+                  <Text style={styles.greeting}>
+                    {(() => {
+                      const raw = userDetails?.fullName || user?.fullName || user?.username || user?.email || '';
+                      if (!raw) return 'Olá';
+
+                      let first = '';
+                      // If it's an email, use the local-part
+                      if (raw.includes('@')) {
+                        first = raw.split('@')[0];
+                      } else {
+                        const tokens = raw.trim().split(/\s+/);
+                        first = tokens[0] || raw;
+                      }
+
+                      // Capitalize first letter
+                      first = first.charAt(0).toUpperCase() + first.slice(1);
+                      return `Olá, ${first}`;
+                    })()}
+                  </Text>
+                  {/* Removed Bank App subtitle as requested */}
                 </View>
               </View>
             </View>
@@ -459,10 +474,10 @@ export default function DashboardScreen() {
             <View style={styles.profileCodeCard}>
               <View style={styles.profileCodeHeader}>
                 <Ionicons name="person-outline" size={24} color={colors.primary} />
-                <Text style={styles.profileCodeTitle}>Meu ID de Usuário</Text>
+                <Text style={styles.profileCodeTitle}>Meu ID do Usuário</Text>
               </View>
               <Text style={styles.profileCodeDescription}>
-                Compartilhe seu nome de usuário para receber transferências
+                Compartilhe seu ID para receber transferências
               </Text>
               
               <View style={styles.profileCodeContainer}>
@@ -501,7 +516,7 @@ export default function DashboardScreen() {
               </Text>
               
               <View style={styles.profileInfoItem}>
-                <Text style={styles.profileInfoLabel}>Nome de usuário</Text>
+                <Text style={styles.profileInfoLabel}>ID do usuário</Text>
                 <Text style={styles.profileInfoValue}>
                   {userDetails?.username || user?.username}
                 </Text>

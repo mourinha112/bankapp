@@ -6,6 +6,7 @@ interface AlertConfig {
   title: string;
   message: string;
   confirmText?: string;
+  onConfirm?: () => void;
 }
 
 export function useCustomAlert() {
@@ -29,6 +30,7 @@ export function useCustomAlert() {
       message: alertConfig.message,
       confirmText: alertConfig.confirmText,
       onClose: hideAlert,
+      onConfirm: alertConfig.onConfirm,
     });
   };
 

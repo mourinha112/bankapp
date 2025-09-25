@@ -259,8 +259,12 @@ export default function LoginScreen() {
       message={alertMessage}
       confirmText={alertConfirm}
       onClose={() => {
+        // X button or backdrop: only hide the alert
         setAlertVisible(false);
-        // se o confirm for 'Criar Conta' navegamos para registro
+      }}
+      onConfirm={() => {
+        // Confirm button pressed: if it's the Create flow, navigate
+        setAlertVisible(false);
         if (alertConfirm === 'Criar Conta') {
           navigation.navigate('Register');
         }

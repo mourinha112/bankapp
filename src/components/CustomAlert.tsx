@@ -17,6 +17,7 @@ interface CustomAlertProps {
   title: string;
   message: string;
   onClose: () => void;
+  onConfirm?: () => void;
   confirmText?: string;
 }
 
@@ -28,6 +29,7 @@ export default function CustomAlert({
   title,
   message,
   onClose,
+  onConfirm,
   confirmText = 'OK'
 }: CustomAlertProps) {
   
@@ -77,6 +79,10 @@ export default function CustomAlert({
     >
       <View style={styles.overlay}>
         <View style={styles.alertContainer}>
+          {/* Close X button */}
+          <TouchableOpacity style={styles.closeIcon} onPress={onClose} accessibilityLabel="Fechar">
+            <Ionicons name="close" size={22} color={colors.text.secondary} />
+          </TouchableOpacity>
           {/* Ícone */}
           <View style={[styles.iconContainer, { backgroundColor: config.iconColor + '20' }]}>
             <Ionicons 
@@ -95,7 +101,13 @@ export default function CustomAlert({
           {/* Botão */}
           <TouchableOpacity 
             style={styles.buttonContainer}
-            onPress={onClose}
+            onPress={() => {
+              if (onConfirm && typeof onConfirm === 'function') {
+                onConfirm();
+              } else {
+                onClose();
+              }
+            }}
             activeOpacity={0.8}
           >
             <LinearGradient
@@ -136,6 +148,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
+  },
+  closeIcon: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
   },
   iconContainer: {
     width: 80,

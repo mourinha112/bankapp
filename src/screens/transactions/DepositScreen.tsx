@@ -132,20 +132,15 @@ export default function DepositScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[globalStyles.buttonSecondary, globalStyles.button, globalStyles.mt16]}
+              style={[globalStyles.button, globalStyles.buttonSecondary, globalStyles.mt16]}
               onPress={() => {
-                // fallback para web
+                // Sempre navegar diretamente para o Dashboard para evitar problemas com goBack
+                // dentro de Modals na web
                 // @ts-ignore
-                if (navigation.canGoBack && navigation.canGoBack()) {
-                  // @ts-ignore
-                  navigation.goBack();
-                } else {
-                  // @ts-ignore
-                  navigation.navigate && navigation.navigate('Dashboard');
-                }
+                if (navigation.navigate) navigation.navigate('Dashboard');
               }}
             >
-              <Text style={globalStyles.buttonSecondaryText}>Cancelar</Text>
+              <Text style={[globalStyles.buttonSecondaryText, { color: colors.primary }]}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
