@@ -129,9 +129,19 @@ export default function RealDepositScreen() {
           email: userData.email,
           cpfCnpj: userData.cpfCnpj,
         });
-        
-        if (customer.error) throw new Error(customer.error);
-        
+
+        if (customer.error) {
+          console.error('Erro ao criar/obter cliente:', customer);
+          throw new Error(customer.error || 'Erro ao criar/obter cliente');
+        }
+
+        if (!customer.id) {
+          console.error('Cliente retornado sem id:', customer);
+          Alert.alert('Erro', 'Não foi possível obter o ID do cliente. Tente novamente.');
+          setLoading(false);
+          return;
+        }
+
         // Depois criar depósito PIX
         const deposit = await BackendAsaasService.createPixDeposit({
           customerId: customer.id,

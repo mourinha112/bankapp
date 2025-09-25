@@ -161,6 +161,12 @@ class BackendAsaasService {
   }
 
   async createPixDeposit(payload: DepositPixPayload) {
+    // Validação rápida para evitar requests inválidos
+    if (!payload || !payload.customerId) {
+      console.log('[BackendAsaasService] Payload inválido para depósito PIX:', payload);
+      return { error: 'customerId ausente. Certifique-se de criar/obter o cliente antes de solicitar depósito.' };
+    }
+
     try {
       console.log('[BackendAsaasService] Criando depósito PIX:', payload);
       const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/deposit/pix`, {
@@ -168,14 +174,14 @@ class BackendAsaasService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
+
       if (!res.ok) {
         console.log('[BackendAsaasService] Erro HTTP no depósito:', res.status);
         const errorText = await res.text();
         console.log('[BackendAsaasService] Erro response depósito:', errorText);
         return { error: `Erro ${res.status}: ${errorText}` };
       }
-      
+
       const data = await res.json();
       console.log('[BackendAsaasService] Depósito criado:', data);
       return data;
