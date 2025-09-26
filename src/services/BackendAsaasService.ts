@@ -3,7 +3,9 @@
 
 // Para descobrir seu IP: ipconfig no CMD e pegar IPv4 da sua rede
 // Ou use o IP que aparece no QR code do Expo (ex: exp://192.168.1.100:8081)
-const BASE_BACKEND_URL = 'http://localhost:3000'; // Ajuste para seu IP local
+// Default rápido para desenvolvimento local (web & emulator). Se você estiver testando
+// em um dispositivo físico, substitua por http://<SEU_IP_LOCAL>:3000 ou use ngrok e aponte para a URL pública.
+const BASE_BACKEND_URL = 'http://localhost:3000'; // Ajuste para seu IP/local/ngrok quando necessário
 
 export interface CreateCustomerPayload {
   name: string;
@@ -40,6 +42,17 @@ export interface LoginPayload {
 }
 
 class BackendAsaasService {
+  // Helper: parse response robustly (handles non-JSON responses)
+  private async safeParseResponse(res: any) {
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      return { ok: res.ok, status: res.status, data };
+    } catch (err) {
+      // Not JSON (HTML or plain text). Return text so caller can log/use it.
+      return { ok: res.ok, status: res.status, data: null, text };
+    }
+  }
   async registerUser(payload: RegisterUserPayload) {
     try {
       console.log('[BackendAsaasService] Registrando usuário:', payload.email);
@@ -48,16 +61,14 @@ class BackendAsaasService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.log('[BackendAsaasService] Erro no registro:', errorText);
-        return { error: `Erro ${res.status}: ${errorText}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro no registro:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Usuário registrado:', data);
-      return data;
+      console.log('[BackendAsaasService] Usuário registrado:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão no registro:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -72,16 +83,14 @@ class BackendAsaasService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.log('[BackendAsaasService] Erro no login:', errorText);
-        return { error: `Erro ${res.status}: ${errorText}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro no login:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Login realizado:', data);
-      return data;
+      console.log('[BackendAsaasService] Login realizado:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão no login:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -96,16 +105,14 @@ class BackendAsaasService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.toUpperCase(), password }),
       });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.log('[BackendAsaasService] Erro no login por username:', errorText);
-        return { error: `Erro ${res.status}: ${errorText}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro no login por username:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Login por username realizado:', data);
-      return data;
+      console.log('[BackendAsaasService] Login por username realizado:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão no login por username:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -143,17 +150,14 @@ class BackendAsaasService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
-      if (!res.ok) {
-        console.log('[BackendAsaasService] Erro HTTP:', res.status, res.statusText);
-        const errorText = await res.text();
-        console.log('[BackendAsaasService] Erro response:', errorText);
-        return { error: `Erro ${res.status}: ${errorText}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro HTTP ao criar/obter cliente:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Cliente criado/obtido:', data);
-      return data;
+      console.log('[BackendAsaasService] Cliente criado/obtido:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}. Verifique se o backend está rodando em ${BASE_BACKEND_URL}` };
@@ -175,16 +179,14 @@ class BackendAsaasService {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        console.log('[BackendAsaasService] Erro HTTP no depósito:', res.status);
-        const errorText = await res.text();
-        console.log('[BackendAsaasService] Erro response depósito:', errorText);
-        return { error: `Erro ${res.status}: ${errorText}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro HTTP no depósito:', message);
+        return { error: message };
       }
-
-      const data = await res.json();
-      console.log('[BackendAsaasService] Depósito criado:', data);
-      return data;
+      console.log('[BackendAsaasService] Depósito criado:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão no depósito:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -192,32 +194,55 @@ class BackendAsaasService {
   }
 
   async createPixWithdraw(payload: WithdrawPixPayload) {
-    const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/withdraw/pix`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    return res.json();
+    try {
+      const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/withdraw/pix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro no withdraw PIX:', message);
+        return { error: message };
+      }
+
+      return parsed.data;
+    } catch (error) {
+      console.log('[BackendAsaasService] Erro de conexão no withdraw PIX:', error);
+      return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
+    }
   }
 
   async getPayment(id: string) {
-    const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/payment/${id}`);
-    return res.json();
+    try {
+      const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/payment/${id}`);
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao obter payment:', message);
+        return { error: message };
+      }
+      return parsed.data;
+    } catch (error) {
+      console.log('[BackendAsaasService] Erro de conexão ao obter payment:', error);
+      return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
+    }
   }
 
   async getPaymentStatus(id: string) {
     try {
       console.log('[BackendAsaasService] Verificando status do pagamento:', id);
       const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/payment/${id}`);
-      
-      if (!res.ok) {
-        console.log('[BackendAsaasService] Erro ao buscar status:', res.status);
-        return { error: `Erro ${res.status}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao buscar status:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Status do pagamento:', data);
-      return data;
+      console.log('[BackendAsaasService] Status do pagamento:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão ao verificar status:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -228,15 +253,14 @@ class BackendAsaasService {
     try {
       console.log('[BackendAsaasService] Buscando saldo do usuário:', email);
       const res = await fetch(`${BASE_BACKEND_URL}/api/user/balance/${email}`);
-      
-      if (!res.ok) {
-        console.log('[BackendAsaasService] Erro ao buscar saldo:', res.status);
-        return { error: `Erro ${res.status}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao buscar saldo:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Saldo do usuário:', data);
-      return data;
+      console.log('[BackendAsaasService] Saldo do usuário:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão ao buscar saldo:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -247,18 +271,15 @@ class BackendAsaasService {
     try {
       console.log('[BackendAsaasService] Buscando usuário por CPF:', cpf);
       const res = await fetch(`${BASE_BACKEND_URL}/api/auth/user-by-cpf/${cpf}`);
-      
-      if (!res.ok) {
-        if (res.status === 404) {
-          return { error: 'CPF não encontrado' };
-        }
-        console.log('[BackendAsaasService] Erro ao buscar CPF:', res.status);
-        return { error: `Erro ${res.status}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        if (parsed.status === 404) return { error: 'CPF não encontrado' };
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao buscar CPF:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Usuário encontrado:', data);
-      return data;
+      console.log('[BackendAsaasService] Usuário encontrado:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão ao buscar CPF:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -269,15 +290,14 @@ class BackendAsaasService {
     try {
       console.log('[BackendAsaasService] Buscando transações do usuário:', email);
       const res = await fetch(`${BASE_BACKEND_URL}/api/user/transactions/${email}`);
-      
-      if (!res.ok) {
-        console.log('[BackendAsaasService] Erro ao buscar transações:', res.status);
-        return { error: `Erro ${res.status}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao buscar transações:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Transações encontradas:', data);
-      return data;
+      console.log('[BackendAsaasService] Transações encontradas:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão ao buscar transações:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -285,8 +305,19 @@ class BackendAsaasService {
   }
 
   async getAccountBalance() {
-    const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/account-balance`);
-    return res.json();
+    try {
+      const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/account-balance`);
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao buscar account balance:', message);
+        return { error: message };
+      }
+      return parsed.data;
+    } catch (error) {
+      console.log('[BackendAsaasService] Erro de conexão ao buscar account balance:', error);
+      return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
+    }
   }
 
   async requestWithdraw(payload: { email: string; amount: number; pixKey: string; description?: string; }) {
@@ -304,20 +335,21 @@ class BackendAsaasService {
       console.log('[BackendAsaasService] 📨 Status da resposta:', res.status);
       console.log('[BackendAsaasService] 📨 Status OK:', res.ok);
       
-      const data = await res.json();
-      console.log('[BackendAsaasService] 📥 Dados da resposta:', data);
-      
-      if (!res.ok) {
+      const parsed = await this.safeParseResponse(res);
+      console.log('[BackendAsaasService] 📥 Dados da resposta (raw):', parsed);
+
+      if (!parsed.ok) {
         console.log('[BackendAsaasService] ❌ Erro na resposta!');
-        // Propaga código específico se existir
+        const data = parsed.data;
         if (data?.code === 'ASAAS_ACCOUNT_NOT_APPROVED') {
           return { error: data.error, code: data.code, original: data.original };
         }
-        return { error: data.error || `Erro ${res.status}` };
+        const message = data?.error || parsed.text || `Erro ${parsed.status}`;
+        return { error: message };
       }
-      
+
       console.log('[BackendAsaasService] ✅ Saque processado com sucesso!');
-      return data;
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] ❌ Erro de conexão:', error);
       return { error: 'Erro de conexão ao solicitar saque' };
@@ -325,24 +357,32 @@ class BackendAsaasService {
   }
 
   async ping() {
-    const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/ping`);
-    return res.json();
+    try {
+      const res = await fetch(`${BASE_BACKEND_URL}/api/asaas/ping`);
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        return { error: message };
+      }
+      return parsed.data;
+    } catch (error) {
+      console.log('[BackendAsaasService] Erro ao ping:', error);
+      return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
+    }
   }
 
   async getUserProfile(email: string) {
     try {
       console.log('[BackendAsaasService] Buscando perfil completo do usuário:', email);
       const res = await fetch(`${BASE_BACKEND_URL}/api/user/profile/${email}`);
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.log('[BackendAsaasService] Erro ao buscar perfil:', errorText);
-        return { error: `Erro ${res.status}: ${errorText}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao buscar perfil:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Perfil carregado:', data);
-      return data;
+      console.log('[BackendAsaasService] Perfil carregado:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão ao buscar perfil:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };
@@ -353,16 +393,24 @@ class BackendAsaasService {
     try {
       console.log('[BackendAsaasService] Buscando usuário por username:', username);
       const res = await fetch(`${BASE_BACKEND_URL}/api/user/by-username/${username}`);
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.log('[BackendAsaasService] Erro ao buscar usuário:', errorText);
-        return { error: res.status === 404 ? 'Usuário não encontrado' : `Erro ${res.status}: ${errorText}` };
+      const parsed = await this.safeParseResponse(res);
+      if (!parsed.ok) {
+        if (parsed.status === 404) return { error: 'Usuário não encontrado' };
+        const message = parsed.data?.error || parsed.text || `Erro ${parsed.status}`;
+        console.log('[BackendAsaasService] Erro ao buscar usuário:', message);
+        return { error: message };
       }
-      
-      const data = await res.json();
-      console.log('[BackendAsaasService] Usuário encontrado:', data);
-      return data;
+
+      // Se o backend retornou OK mas o corpo não era JSON (parsed.data === null),
+      // devolvemos um erro legível em vez de null para evitar crashes no frontend.
+      if (parsed.data == null) {
+        const message = parsed.text || 'Resposta inválida do servidor';
+        console.log('[BackendAsaasService] Resposta inesperada ao buscar usuário (não-JSON):', message);
+        return { error: message };
+      }
+
+      console.log('[BackendAsaasService] Usuário encontrado:', parsed.data);
+      return parsed.data;
     } catch (error) {
       console.log('[BackendAsaasService] Erro de conexão ao buscar usuário:', error);
       return { error: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` };

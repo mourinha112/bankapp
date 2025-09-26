@@ -117,22 +117,27 @@ app.post('/webhook/asaas', async (req, res) => {
       const user = await database.getUserByAsaasCustomerId(payment.customer);
       if (user) {
         console.log('👤 Usuário encontrado:', user.email);
-        
-        // Atualizar saldo
-        await database.updateUserBalance(user.id, payment.value, 'add');
-        
-        // Criar transação
+
+        // Aplicar taxa fixa de R$ 2,00 no momento do depósito
+        const fee = 2.00;
+        const gross = parseFloat(payment.value) || 0;
+        const net = Math.max(0, gross - fee);
+
+        // Atualizar saldo com o valor líquido (já descontando a taxa)
+        await database.updateUserBalance(user.id, net, 'add');
+
+        // Criar transação registrando o valor líquido e mencionando a taxa
         await database.createTransaction({
           id: payment.id,
           user_id: user.id,
           type: 'deposit',
-          amount: payment.value,
+          amount: net,
           status: payment.status,
           asaas_payment_id: payment.id,
-          description: 'Depósito via PIX'
+          description: `Depósito via PIX (valor bruto R$ ${gross.toFixed(2)}, taxa R$ ${fee.toFixed(2)})`
         });
-        
-        console.log('✅ Saldo atualizado:', user.email, '+', payment.value);
+
+        console.log('✅ Saldo atualizado (líquido):', user.email, '+', net, '(bruto:', gross, 'taxa:', fee, ')');
       } else {
         console.log('❌ Usuário não encontrado para customer:', payment.customer);
       }
@@ -204,19 +209,24 @@ app.post('/webhook/test', async (req, res) => {
     if (event === 'PAYMENT_RECEIVED') {
       const user = await database.getUserByAsaasCustomerId(payment.customer);
       if (user) {
-        await database.updateUserBalance(user.id, payment.value, 'add');
+        // Aplicar taxa fixa de R$2 no teste também
+        const fee = 2.00;
+        const gross = parseFloat(payment.value) || 0;
+        const net = Math.max(0, gross - fee);
+
+        await database.updateUserBalance(user.id, net, 'add');
         await database.createTransaction({
           id: payment.id,
           user_id: user.id,
           type: 'deposit',
-          amount: payment.value,
+          amount: net,
           status: payment.status,
           asaas_payment_id: payment.id,
-          description: 'Teste manual de depósito'
+          description: `Teste manual de depósito (bruto R$ ${gross.toFixed(2)}, taxa R$ ${fee.toFixed(2)})`
         });
-        
-        console.log('✅ Teste realizado com sucesso:', user.email, '+', payment.value);
-        res.json({ success: true, message: 'Webhook testado com sucesso', user: user.email, amount: payment.value });
+
+        console.log('✅ Teste realizado com sucesso:', user.email, '+', net, '(bruto:', gross, 'taxa:', fee, ')');
+        res.json({ success: true, message: 'Webhook testado com sucesso', user: user.email, amount: net });
       } else {
         console.log('❌ Usuário não encontrado para customer:', payment.customer);
         res.json({ success: false, error: 'Usuário não encontrado', customer: payment.customer });

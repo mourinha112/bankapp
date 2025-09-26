@@ -34,8 +34,9 @@ async function connectDB() {
     await createTables();
   } catch (error) {
     console.error('❌ Erro ao conectar MySQL:', error);
-    // don't exit the process in production; allow supervisor to restart
-    process.exit(1);
+    // Não encerra o processo automaticamente para permitir diagnóstico local.
+    // Lance o erro para que o chamador saiba que a conexão falhou.
+    throw error;
   }
 }
 

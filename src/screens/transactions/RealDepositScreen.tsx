@@ -20,6 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { colors, globalStyles } from '../../theme';
 import BackendAsaasService from '../../services/BackendAsaasService';
+import { ToastAndroid } from 'react-native';
 
 export default function RealDepositScreen({ onClose }: { onClose?: () => void }) {
   const navigation = useNavigation();
@@ -243,19 +244,36 @@ export default function RealDepositScreen({ onClose }: { onClose?: () => void })
 
   const PixPaymentView = () => {
     const copyToClipboard = async () => {
+      if (!pixCode) {
+        Alert.alert('Erro', 'Nenhum código PIX disponível para copiar');
+        return;
+      }
+
       try {
-        // Try expo-clipboard first (native). On web, fallback to navigator.clipboard
-        if (Clipboard && Clipboard.setStringAsync) {
-          await Clipboard.setStringAsync(pixCode);
-        } else if (typeof navigator !== 'undefined' && (navigator as any).clipboard && (navigator as any).clipboard.writeText) {
-          await (navigator as any).clipboard.writeText(pixCode);
+        if (Platform.OS === 'web') {
+          if (typeof navigator !== 'undefined' && (navigator as any).clipboard && (navigator as any).clipboard.writeText) {
+            await (navigator as any).clipboard.writeText(pixCode);
+          } else {
+            throw new Error('Navigator.clipboard não disponível');
+          }
         } else {
-          throw new Error('Clipboard API não disponível');
+          // Mobile native: usar expo-clipboard
+          if (Clipboard && Clipboard.setStringAsync) {
+            await Clipboard.setStringAsync(pixCode);
+          } else {
+            throw new Error('Clipboard nativo não disponível');
+          }
         }
-        Alert.alert('✅ Copiado!', 'Código PIX copiado para a área de transferência');
+
+        // Feedback leve para mobile (Toast) e modal para iOS/web
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Código PIX copiado para a área de transferência', ToastAndroid.SHORT);
+        } else {
+          Alert.alert('✅ Copiado!', 'Código PIX copiado para a área de transferência');
+        }
       } catch (error) {
         console.error('Erro ao copiar:', error);
-        Alert.alert('Erro', 'Não foi possível copiar o código');
+        Alert.alert('Erro', 'Não foi possível copiar o código PIX. Tente novamente');
       }
     };
 
@@ -385,13 +403,34 @@ export default function RealDepositScreen({ onClose }: { onClose?: () => void })
             <View style={styles.infoBox}>
               <Text style={styles.infoTitle}>ℹ️ Informações importantes</Text>
               <Text style={styles.infoText}>
-                • PIX: Transferência instantânea e gratuita{'\n'}
-                • Cartão: Taxa de R$ 0,99 por transação{'\n'}
-                • Valor mínimo PIX: R$ 5,00{'\n'}
-                • Valor máximo: R$ 10.000,00{'\n'}
-                • Processamento automático via Asaas
+                  • PIX: Taxa fixa de R$ 2,00 no momento do depósito (será deduzida do valor){'\n'}
+                  • Cartão: Taxa de R$ 0,99 por transação{'\n'}
+                  • Valor mínimo PIX: R$ 5,00{'\n'}
+                  • Valor máximo: R$ 10.000,00{'\n'}
+                  • Processamento automático via Asaas
               </Text>
             </View>
+
+              {!!amount && (
+                <View style={[styles.feeInfo, { marginTop: 8 }]}> 
+                  <View style={styles.feeRow}>
+                    <Text style={styles.feeLabel}>Valor enviado:</Text>
+                    <Text style={styles.feeValue}>R$ {amount}</Text>
+                  </View>
+                  <View style={styles.feeRow}>
+                    <Text style={styles.feeLabel}>Taxa PIX:</Text>
+                    <Text style={styles.feeValue}>R$ 2,00</Text>
+                  </View>
+                  <View style={[styles.feeRow, styles.totalRow]}>
+                    <Text style={styles.totalLabel}>Você receberá:</Text>
+                    <Text style={styles.totalValue}>{(() => {
+                      const numeric = parseFloat((amount || '0,00').replace(',', '.')) || 0;
+                      const net = Math.max(0, numeric - 2);
+                      return net.toFixed(2).replace('.', ',');
+                    })()}</Text>
+                  </View>
+                </View>
+              )}
 
             <TouchableOpacity
               style={[
