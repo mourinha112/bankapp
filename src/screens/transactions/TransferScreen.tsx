@@ -14,7 +14,7 @@ interface User {
   balance: number;
 }
 
-export default function TransferScreen() {
+export default function TransferScreen({ onClose }: { onClose?: () => void }) {
   const navigation = useNavigation();
   const { state } = useApp();
   const [userCode, setUserCode] = useState('');
@@ -75,7 +75,16 @@ export default function TransferScreen() {
         Alert.alert(
           'Transferência realizada!',
           `R$ ${numericAmount.toFixed(2)} enviados para ${recipient.name}`,
-          [ { text: 'OK', onPress: () => navigation.goBack() } ]
+          [ { text: 'OK', onPress: () => {
+              // navigate to Dashboard instead of goBack to avoid web history issues
+                    // @ts-ignore
+                    if (onClose && typeof onClose === 'function') {
+                      onClose();
+                      return;
+                    }
+                    // @ts-ignore
+                    if (navigation.navigate) navigation.navigate('Dashboard');
+            } } ]
         );
       } else {
         Alert.alert('Erro na transferência', data.message || 'Tente novamente');
@@ -91,9 +100,7 @@ export default function TransferScreen() {
     <SafeAreaView style={globalStyles.container}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}> Voltar</Text>
-          </TouchableOpacity>
+          {/* Removido botão Voltar: já existe botão X no canto do modal */}
           <Text style={styles.title}>Transferir</Text>
           <View style={styles.placeholder} />
         </View>

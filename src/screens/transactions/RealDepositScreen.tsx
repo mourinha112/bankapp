@@ -21,7 +21,7 @@ import { useApp } from '../../context/AppContext';
 import { colors, globalStyles } from '../../theme';
 import BackendAsaasService from '../../services/BackendAsaasService';
 
-export default function RealDepositScreen() {
+export default function RealDepositScreen({ onClose }: { onClose?: () => void }) {
   const navigation = useNavigation();
   const { state, updateBalance } = useApp();
   const [amount, setAmount] = useState('');
@@ -167,6 +167,17 @@ export default function RealDepositScreen() {
 
       if (response.success && response.pixCopyPaste) {
         setPixCode(response.pixCopyPaste);
+        // Save QR image/link if backend returned it
+        if (response.pixQrCode) {
+          let qr = response.pixQrCode;
+          // If backend returned raw base64 (no data: prefix), add proper prefix so <Image> can render it
+          if (typeof qr === 'string' && !qr.startsWith('http') && !qr.startsWith('data:')) {
+            // trim whitespace/newlines
+            const cleaned = qr.replace(/\s+/g, '');
+            qr = `data:image/png;base64,${cleaned}`;
+          }
+          setPaymentUrl(qr);
+        }
         setShowPayment(true);
       } else if (!response.success) {
         Alert.alert('Erro', response.error || 'Erro ao processar pagamento');
@@ -233,7 +244,14 @@ export default function RealDepositScreen() {
   const PixPaymentView = () => {
     const copyToClipboard = async () => {
       try {
-        await Clipboard.setStringAsync(pixCode);
+        // Try expo-clipboard first (native). On web, fallback to navigator.clipboard
+        if (Clipboard && Clipboard.setStringAsync) {
+          await Clipboard.setStringAsync(pixCode);
+        } else if (typeof navigator !== 'undefined' && (navigator as any).clipboard && (navigator as any).clipboard.writeText) {
+          await (navigator as any).clipboard.writeText(pixCode);
+        } else {
+          throw new Error('Clipboard API não disponível');
+        }
         Alert.alert('✅ Copiado!', 'Código PIX copiado para a área de transferência');
       } catch (error) {
         console.error('Erro ao copiar:', error);
@@ -249,6 +267,13 @@ export default function RealDepositScreen() {
         </Text>
         
         <View style={styles.pixCodeContainer}>
+          {/* QR Image (if available) */}
+          {paymentUrl ? (
+            <View style={styles.qrContainer}>
+              <Image source={{ uri: paymentUrl }} style={styles.qrImage} resizeMode="contain" />
+            </View>
+          ) : null}
+
           <Text style={styles.pixCodeLabel}>Código PIX Copia e Cola:</Text>
           <TextInput
             style={styles.pixCodeInput}
@@ -389,9 +414,36 @@ export default function RealDepositScreen() {
             <TouchableOpacity
               style={[globalStyles.button, globalStyles.mt16]}
               onPress={() => {
-                // Navegar diretamente para Dashboard para evitar GO_BACK não tratado na web/modal
-                // @ts-ignore
-                if (navigation.navigate) navigation.navigate('Dashboard');
+                try {
+                  // Se a tela foi aberta via Modal no Dashboard, chamar o callback onClose passado
+                  if (onClose && typeof onClose === 'function') {
+                    onClose();
+                    return;
+                  }
+
+                  // Caso contrário, navegar para Dashboard (fallback)
+                  // @ts-ignore
+                  if (navigation.canGoBack && navigation.canGoBack()) {
+                    // @ts-ignore
+                    navigation.goBack();
+                    return;
+                  }
+
+                  // @ts-ignore
+                  const parent = navigation.getParent && navigation.getParent();
+                  if (parent && parent.navigate) {
+                    parent.navigate('Dashboard');
+                    return;
+                  }
+
+                  // Fallback simples
+                  // @ts-ignore
+                  if (navigation.navigate) navigation.navigate('Dashboard');
+                } catch (err) {
+                  // Fallback final
+                  // @ts-ignore
+                  navigation.navigate && navigation.navigate('Dashboard');
+                }
               }}
             >
               <Text style={globalStyles.buttonText}>Cancelar</Text>
@@ -664,6 +716,17 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 16,
     minHeight: 80,
+  },
+  qrContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    marginBottom: 12,
   },
   copyButton: {
     backgroundColor: colors.primary,

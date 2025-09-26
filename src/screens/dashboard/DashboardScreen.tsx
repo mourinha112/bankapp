@@ -282,15 +282,25 @@ export default function DashboardScreen() {
 
           <View style={styles.balanceContainer}>
             <Text style={styles.balanceLabel}>Conta</Text>
-            {showBalance ? (
-              <Text style={styles.balance}>
-                R$ {(user?.balance || 0).toFixed(2).replace('.', ',')}
-              </Text>
-            ) : (
-              <Text style={styles.balance}>
-                R$ ••••••
-              </Text>
-            )}
+            <View style={styles.balanceRow}>
+              {showBalance ? (
+                <Text style={styles.balance}>
+                  R$ {(user?.balance || 0).toFixed(2).replace('.', ',')}
+                </Text>
+              ) : (
+                <Text style={styles.balance}>
+                  R$ ••••••
+                </Text>
+              )}
+
+              <TouchableOpacity
+                onPress={async () => { await fetchUserBalance(); await loadRecentTransactions(); }}
+                style={styles.smallRefreshButton}
+                accessibilityLabel="Atualizar saldo"
+              >
+                <Ionicons name="refresh" size={16} color={colors.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 
@@ -936,6 +946,20 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: colors.success,
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  smallRefreshButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)'
   },
   profileCodeCard: {
     backgroundColor: colors.white,

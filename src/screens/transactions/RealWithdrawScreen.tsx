@@ -16,10 +16,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { colors, globalStyles } from '../../theme';
 import BackendAsaasService from '../../services/BackendAsaasService';
+import { useCustomAlert } from '../../hooks/useCustomAlert';
 
-export default function RealWithdrawScreen() {
+export default function RealWithdrawScreen({ onClose }: { onClose?: () => void }) {
   const navigation = useNavigation();
   const { state, withdraw } = useApp();
+  const { showAlert, AlertComponent } = useCustomAlert();
   
   const [amount, setAmount] = useState('');
   const [pixKey, setPixKey] = useState('');
@@ -55,54 +57,56 @@ export default function RealWithdrawScreen() {
   };
 
   const handleAmountChange = (text: string) => {
-    const numericValue = text.replace(/[^0-9]/g, '');
-    const formatted = (parseInt(numericValue) / 100).toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    setAmount(formatted === '0,00' ? '' : formatted);
+    // Permitir digitar livremente números, vírgula e ponto. Evitar reformatar para não quebrar o cursor.
+    const cleaned = text.replace(/[^0-9.,]/g, '');
+    setAmount(cleaned);
   };
 
   const getNumericAmount = () => {
-    return parseFloat(amount.replace(/\./g, '').replace(',', '.'));
+    if (!amount) return 0;
+    // Suporta entradas: '1.234,56', '1234.56', '10,00', '10.00', '10'
+    const cleaned = amount.replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? 0 : n;
   };
 
   const validateFields = () => {
     const numericAmount = getNumericAmount();
     
     if (!amount || numericAmount <= 0) {
-      Alert.alert('Erro', 'Digite um valor válido para saque');
+      showAlert({ type: 'error', title: 'Erro', message: 'Digite um valor válido para saque' });
       return false;
     }
 
     if (numericAmount < 5) {
-      Alert.alert('Erro', 'Valor mínimo para saque: R$ 5,00');
+      showAlert({ type: 'error', title: 'Erro', message: 'Valor mínimo para saque: R$ 5,00' });
       return false;
     }
 
-    if (numericAmount > state.auth.user!.balance) {
-      Alert.alert('Saldo Insuficiente', 'Você não possui saldo suficiente para este saque');
+    const userBalance = state.auth.user ? Number(state.auth.user.balance) : 0;
+    if (numericAmount > userBalance) {
+      showAlert({ type: 'error', title: 'Saldo Insuficiente', message: `Você não possui saldo suficiente para este saque. Saldo atual: R$ ${userBalance.toFixed(2).replace('.', ',')}` });
       return false;
     }
 
     if (!pixKey.trim()) {
-      Alert.alert('Erro', 'Digite sua chave PIX para receber o saque');
+      showAlert({ type: 'error', title: 'Erro', message: 'Digite sua chave PIX para receber o saque' });
       return false;
     }
 
     // Validação básica da chave PIX
     if (pixKeyType === 'cpf' && pixKey.replace(/\D/g, '').length !== 11) {
-      Alert.alert('Erro', 'Digite um CPF válido');
+      showAlert({ type: 'error', title: 'Erro', message: 'Digite um CPF válido' });
       return false;
     }
 
     if (pixKeyType === 'email' && !pixKey.includes('@')) {
-      Alert.alert('Erro', 'Digite um email válido');
+      showAlert({ type: 'error', title: 'Erro', message: 'Digite um email válido' });
       return false;
     }
 
     if (pixKeyType === 'phone' && pixKey.replace(/\D/g, '').length < 10) {
-      Alert.alert('Erro', 'Digite um telefone válido');
+      showAlert({ type: 'error', title: 'Erro', message: 'Digite um telefone válido' });
       return false;
     }
 
@@ -113,7 +117,7 @@ export default function RealWithdrawScreen() {
     if (!validateFields()) return;
     
     if (!state.auth.user?.email) {
-      Alert.alert('Erro', 'Usuário não encontrado. Faça login novamente.');
+      showAlert({ type: 'error', title: 'Erro', message: 'Usuário não encontrado. Faça login novamente.' });
       return;
     }
 
@@ -135,33 +139,46 @@ export default function RealWithdrawScreen() {
       };
 
       console.log('📤 [RealWithdrawScreen] Dados da requisição:', requestData);
-      
+
       const response = await BackendAsaasService.requestWithdraw(requestData);
-      
+
       console.log('📥 [RealWithdrawScreen] Resposta do backend:', response);
 
       if (response.success) {
         // Só debita se o saque foi criado com sucesso
         await withdraw(numericAmount);
-        
-        Alert.alert(
-          '✅ Saque Processado!',
-          `Transferência PIX de R$ ${amount} enviada com sucesso!\n\n🔄 Status: ${response.status || 'Processando'}\n📅 Previsão: ${response.expectedTransferDate || 'Imediato'}\n🆔 ID: ${response.transferId || response.id}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+
+        showAlert({
+          type: 'success',
+          title: 'Saque Processado!',
+          message: `Transferência PIX de R$ ${amount} enviada com sucesso!\n\n🔄 Status: ${response.status || 'Processando'}\n📅 Previsão: ${response.expectedTransferDate || 'Imediato'}\n🆔 ID: ${response.transferId || response.id}`,
+          confirmText: 'OK',
+          onConfirm: () => {
+            // Se um callback onClose foi fornecido (modal), usá-lo para fechar;
+            if (onClose && typeof onClose === 'function') {
+              onClose();
+              return;
+            }
+            // Navegação após confirmar
+            // @ts-ignore
+            if (navigation.canGoBack && navigation.canGoBack()) {
+              // @ts-ignore
+              navigation.goBack();
+            } else if (navigation.getParent && navigation.getParent()) {
+              // @ts-ignore
+              navigation.getParent().navigate && navigation.getParent().navigate('Dashboard');
+            } else {
+              // @ts-ignore
+              navigation.navigate && navigation.navigate('Dashboard');
+            }
+          }
+        });
       } else {
-        Alert.alert(
-          '❌ Erro no Saque',
-          response.error || 'Não foi possível processar o saque. Tente novamente.'
-        );
+        showAlert({ type: 'error', title: 'Erro no Saque', message: response.error || 'Não foi possível processar o saque. Tente novamente.' });
       }
     } catch (error) {
-      Alert.alert('Erro', 'Falha na comunicação. Verifique sua conexão e tente novamente.');
+      console.error('Erro ao solicitar saque:', error);
+      showAlert({ type: 'error', title: 'Erro', message: 'Falha na comunicação. Verifique sua conexão e tente novamente.' });
     } finally {
       setLoading(false);
     }
@@ -297,6 +314,8 @@ export default function RealWithdrawScreen() {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+      {/* Alert modal global para esta tela */}
+      <AlertComponent />
     </SafeAreaView>
   );
 }
